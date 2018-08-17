@@ -1,6 +1,6 @@
 import sys
 import os
-
+from oslo_config import cfg
 PROJECT_ROOT = os.path.abspath(os.path.join(
     os.path.dirname(os.path.realpath(__file__)), '..'))
 if PROJECT_ROOT not in sys.path:
@@ -12,6 +12,7 @@ from common.tun_connector import TunConnector
 from common.connector import CON_STATE
 from common.connector import ConnectorClient
 from common import epoll_recever
+import conf
 import worker_manager
 logger = logging.getLogger('my_logger')
 
@@ -19,7 +20,7 @@ logger = logging.getLogger('my_logger')
 def run():
     recver = epoll_recever.Epoll_receiver()
 
-    _outer_con = ConnectorClient('192.168.184.139',9999)
+    _outer_con = ConnectorClient(cfg.CONF.SERVER_IP,cfg.CONF.SERVER_PORT)
     _outer_con.connect()
     if _outer_con.con_state != CON_STATE.CON_CONNECTED:
         logger.error('connect to remote failed')
@@ -66,8 +67,11 @@ def log_config(level):
     logger.addHandler(console)
 
 def main():
-    log_config('DEBUG')
+    conf.register_core_common_config_opts(cfg.CONF)
+    log_config(cfg.CONF.LOG_LEVEL)
+    logger.info("Process start!")
     run()
 
 if __name__ == '__main__':
+    cfg.CONF(sys.argv[1:])
     sys.exit(main())

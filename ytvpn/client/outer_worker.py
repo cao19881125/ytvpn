@@ -81,10 +81,7 @@ class OuterWorker(object):
 
         f_data = event.forward_data
         if event.forward_data.data_type == forward_data.DATA_TYPE.TRANS_DATA:
-            f1_time = time.time()
             self.__data_handler.trans_data(self.__worker_id, f_data.data, self.__connector)
-            f2_time = time.time()
-            print 'send len:%d use_time:%.06f'%(len(f_data.data),(f2_time-f1_time)*1000)
 
     def __handle_working_event(self, event):
         error_happen = False

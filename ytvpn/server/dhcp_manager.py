@@ -1,11 +1,12 @@
 from common import tools
+from oslo_config import cfg
 
 class DHCPManager(object):
     def __init__(self):
-        self.__tun_ip = '10.5.0.1'
+        self.__tun_ip = cfg.CONF.SERVERIP
         # ip range : 10.5.0.10-20
-        range_str = '10.5.0.10-20'
-        self.__parse_range(range_str)
+        self.__range_str = cfg.CONF.DHCP_POOL
+        self.__parse_range(self.__range_str)
 
 
     def __parse_range(self,range_str):

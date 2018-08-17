@@ -1,5 +1,6 @@
 import sys
 import os
+from oslo_config import cfg
 
 PROJECT_ROOT = os.path.abspath(os.path.join(
     os.path.dirname(os.path.realpath(__file__)), '..'))
@@ -14,13 +15,14 @@ from common.tun_connector import TunConnector
 from common.connector import CON_STATE
 from common import acceptor
 from common import epoll_recever
+import conf
 import worker_manager
 
 logger = logging.getLogger('my_logger')
 def run():
     recver = epoll_recever.Epoll_receiver()
 
-    outer_port = 9999
+    outer_port = cfg.CONF.LISTEN_PORT
     outer_acceptor = acceptor.Acceptor('0.0.0.0', outer_port)
     logger.info('Outer port listen:' + str(outer_port))
 
@@ -71,9 +73,12 @@ def log_config(level):
 
 
 def main():
-    log_config('DEBUG')
+    conf.register_core_common_config_opts(cfg.CONF)
+    log_config(cfg.CONF.LOG_LEVEL)
+    logger.info("Process start!")
     run()
 
 
 if __name__ == '__main__':
+    cfg.CONF(sys.argv[1:])
     sys.exit(main())
