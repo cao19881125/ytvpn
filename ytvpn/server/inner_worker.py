@@ -34,15 +34,15 @@ class InnerWorker(object):
     def __north_interface_transdata_event(self, event):
         if not isinstance(event,forward_event.TransDataEvent):
             return
-        f1t = time.time()
         if self.__state == self.State.WORKING:
             if event.forward_data.data_type == forward_data.DATA_TYPE.TRANS_DATA:
-                send_bytes = self.__tun_connector.send(event.forward_data.data)
-                if send_bytes <= 0:
-                    logger.error("InnerWorker %d trans bytes <=0 change state to CLOSED", self.__id)
-                    self.__state = self.State.CLOSED
-        f2t = time.time()
-        print '__north_interface_transdata_event time:%.06f'%(f2t - f1t)
+                ip_packages = IPProtocolHandler.parse_ip_package(event.forward_data.data)
+                for package in ip_packages:
+                    send_bytes = self.__tun_connector.send(package[1])
+                    if send_bytes <= 0:
+                        logger.error("InnerWorker %d trans bytes <=0 change state to CLOSED", self.__id)
+                        self.__state = self.State.CLOSED
+                        return
 
     def __scheduler_event(self, event):
         if self.__state == self.State.NONE:
@@ -69,10 +69,17 @@ class InnerWorker(object):
                 # trans data
                 try:
                     ip_packages = IPProtocolHandler.parse_ip_package(bytearray(recv_msg))
+                    ip_msg_map = {}
                     for package in ip_packages:
-                        trans_data = forward_data.ForwardData(forward_data.DATA_TYPE.TRANS_DATA, 0,package[0],package[1])
-                        trans_data_event = forward_event.TransDataEvent(package[0], trans_data)
 
+                        if not ip_msg_map.has_key(package[0]):
+                            ip_msg_map[package[0]] = package[1]
+                        else:
+                            ip_msg_map[package[0]] += package[1]
+
+                    for ip, data in ip_msg_map.items():
+                        trans_data = forward_data.ForwardData(forward_data.DATA_TYPE.TRANS_DATA, 0, ip, data)
+                        trans_data_event = forward_event.TransDataEvent(ip, trans_data)
                         self.__north_interface_channel(trans_data_event)
                 except Exception, e:
                     error_happen = True

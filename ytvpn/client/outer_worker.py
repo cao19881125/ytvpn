@@ -38,7 +38,6 @@ class OuterWorker(object):
         if len(datas) <= 0:
             return
 
-        total_len = 0
         if self.__state == self.State.LOGIN:
             for data in datas:
                 if data.data_type == forward_data.DATA_TYPE.LOGIN:
@@ -53,15 +52,9 @@ class OuterWorker(object):
         elif self.__state == self.State.WORKING:
             for data in datas:
                 if data.data_type == forward_data.DATA_TYPE.TRANS_DATA:
-                    total_len += len(data.data)
                     trans_event = forward_event.TransDataEvent(data.id, data)
                     self.__sourth_interface_channel(trans_event)
 
-        if total_len <= 0:
-            return
-        end_time = time.time()
-        #print 'total size:%d use_time:%.06f per_100M_time:%.06f' % \
-        #      (total_len, end_time - self.recv__begin_time,float(100 * 1024 * 1024) / total_len * (end_time - self.recv__begin_time))
 
     def __scheduler_event(self, event):
         if not isinstance(event,forward_event.SchedulerEvent):
@@ -88,12 +81,14 @@ class OuterWorker(object):
 
         f_data = event.forward_data
         if event.forward_data.data_type == forward_data.DATA_TYPE.TRANS_DATA:
+            f1_time = time.time()
             self.__data_handler.trans_data(self.__worker_id, f_data.data, self.__connector)
+            f2_time = time.time()
+            print 'send len:%d use_time:%.06f'%(len(f_data.data),(f2_time-f1_time)*1000)
 
     def __handle_working_event(self, event):
         error_happen = False
         if event.fd_event & select.EPOLLIN:
-            self.recv__begin_time = time.time()
             recv_msg = self.__connector.recv()
             if len(recv_msg) > 0:
                 # pass data

@@ -46,10 +46,13 @@ class InnerWorker(object):
 
         if self.__state == self.State.WORKING:
             if event.forward_data.data_type == forward_data.DATA_TYPE.TRANS_DATA:
-                send_bytes = self.__tun_connector.send(event.forward_data.data)
-                if send_bytes <= 0:
-                    logger.error("InnerWorker %d trans bytes <=0 change state to CLOSED", self.__id)
-                    self.__state = self.State.CLOSED
+                ip_packages = IPProtocolHandler.parse_ip_package(event.forward_data.data)
+                for package in ip_packages:
+                    send_bytes = self.__tun_connector.send(package[1])
+                    if send_bytes <= 0:
+                        logger.error("InnerWorker trans bytes <=0 change state to CLOSED")
+                        self.__state = self.State.CLOSED
+                        return
 
     def __allocate_ip_event(self,event):
         if self.__state != self.State.ALLOCATE_IP:
@@ -66,21 +69,28 @@ class InnerWorker(object):
 
     def __handle_working_event(self, event):
         error_happen = False
-        f1_time = time.time()
-        total_len = 0
         if event.fd_event & select.EPOLLIN:
 
             recv_msg = self.__tun_connector.recv()
             if len(recv_msg) > 0:
-                total_len = len(recv_msg)
                 # trans data
                 try:
-                    ip_packages = IPProtocolHandler.parse_ip_package(bytearray(recv_msg))
-                    for package in ip_packages:
-                        trans_data = forward_data.ForwardData(forward_data.DATA_TYPE.TRANS_DATA, 0,package[0],package[1])
-                        trans_data_event = forward_event.TransDataEvent(package[0], trans_data)
-
-                        self.__north_interface_channel(trans_data_event)
+                    # ip_packages = IPProtocolHandler.parse_ip_package(bytearray(recv_msg))
+                    # ip_msg_map = {}
+                    # for package in ip_packages:
+                    #
+                    #     if not ip_msg_map.has_key(package[0]):
+                    #         ip_msg_map[package[0]] = package[1]
+                    #     else:
+                    #         ip_msg_map[package[0]] += package[1]
+                    #
+                    # for ip,data in ip_msg_map.items():
+                    #     trans_data = forward_data.ForwardData(forward_data.DATA_TYPE.TRANS_DATA, 0,ip,data)
+                    #     trans_data_event = forward_event.TransDataEvent(ip, trans_data)
+                    #     self.__north_interface_channel(trans_data_event)
+                    trans_data = forward_data.ForwardData(forward_data.DATA_TYPE.TRANS_DATA, 0, '', bytearray(recv_msg))
+                    trans_data_event = forward_event.TransDataEvent('', trans_data)
+                    self.__north_interface_channel(trans_data_event)
                 except Exception, e:
                     error_happen = True
                     logger.error("InnerWorker  current state:WORKING send data error" )
@@ -97,11 +107,6 @@ class InnerWorker(object):
         if error_happen:
             self.__state = self.State.CLOSED
             logger.debug("InnerWorker current state:WORKING change state to CLOSED" )
-        end_time = time.time()
-        if total_len <= 0:
-            return
-        print 'total size:%d use_time:%.06f per_100M_time:%.06f' % \
-             (total_len, (end_time - f1_time)*1000,float(100 * 1024 * 1024) / total_len * (end_time - f1_time)*1000)
 
 
     @forward_event.event_filter

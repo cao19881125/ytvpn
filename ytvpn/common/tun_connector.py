@@ -59,15 +59,12 @@ class TunConnector(object):
             return ''
 
         recv_msg = ''
-        f1_time = time.time()
         while True:
             try:
                 recv_msg_temp = os.read(self._fd, 1024 * 1024)
 
                 recv_msg += recv_msg_temp
             except Exception,e:
-                f2_time = time.time()
-                print 'recv %d time:%.06f'%(len(recv_msg),(f2_time-f1_time)*1000)
                 return recv_msg
 
     def send(self,msg):

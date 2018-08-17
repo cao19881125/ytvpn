@@ -43,7 +43,6 @@ class OuterWorker(object):
     def __handle_working_event(self, event):
         error_happen = False
         if event.fd_event & select.EPOLLIN:
-            self.recv__begin_time = time.time()
             recv_msg = self.__connector.recv()
             if len(recv_msg) > 0:
                 # pass data
@@ -53,7 +52,6 @@ class OuterWorker(object):
                 if self.__connector.con_state != connector.CON_STATE.CON_CONNECTED:
                     error_happen = True
                     logger.error("OuterWorker current state:WORKING recv data error")
-            self.recv_end_time = time.time()
 
         elif event.fd_event & select.EPOLLHUP:
             error_happen = True
@@ -72,7 +70,6 @@ class OuterWorker(object):
         if len(datas) <= 0:
             return
 
-        total_len = 0
         if self.__state == self.State.LOGIN:
             for data in datas:
                 if data.data_type == forward_data.DATA_TYPE.LOGIN:
@@ -82,18 +79,10 @@ class OuterWorker(object):
         elif self.__state == self.State.WORKING:
             for data in datas:
                 if data.data_type == forward_data.DATA_TYPE.TRANS_DATA:
-                    total_len += len(data.data)
                     trans_event = forward_event.TransDataEvent(data.id, data)
                     self.__sourth_interface_channel(trans_event)
 
-                    #print 'package size: %d send_wait_time:%.06f recv_time:%.06f send_time:%.06f total_time:%.06f'%\
-                    #      (len(data.data),(send_begin_time - self.recv_end_time),(self.recv_end_time - self.recv__begin_time),
-                    #       (end_time - send_begin_time),(end_time - self.recv__begin_time))
-                    # print 'package size: %d (f2-f1):%.06f total_time:%.06f percent:%.03f'%\
-                    #       (len(data.data),(self.f2_time-self.f1_time),(end_time - self.recv__begin_time),
-                    #       (self.f2_time - self.f1_time)/(end_time - self.recv__begin_time))
-        end_time = time.time()
-        print 'total size:%d use_time:%.06f per_100M_time:%.06f'%(total_len,(end_time-self.recv__begin_time)*1000,float(100*1024*1024)/total_len*(end_time-self.recv__begin_time)*1000)
+
     def __scheduler_event(self, event):
         if not isinstance(event,forward_event.SchedulerEvent):
             return

@@ -50,12 +50,9 @@ class Connector(object):
 
     def send(self,msg):
         try:
-            f1_time = time.time()
             self._socket.setblocking(1)
             send_bytes = self._socket.send(msg)
             self._socket.setblocking(0)
-            f2_time = time.time()
-            print 'send %d time:%.06f' % (len(msg), (f2_time - f1_time) * 1000)
             return send_bytes
         except Exception,e:
             self._socket.close()
