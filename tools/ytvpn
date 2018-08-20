@@ -1,0 +1,7 @@
+#!/usr/bin/python
+import sys
+
+from ytvpn import ytvpn
+
+if __name__=='__main__':
+    sys.exit(ytvpn.main())

@@ -32,7 +32,8 @@ def run():
         _outer_worker = _worker_manager.add_outer_worker(_outer_socket,address)
 
         recver.add_receiver(_outer_socket.fileno(), select.EPOLLIN,_outer_worker.handler_event)
-        logger.info('outer worker accept fileno:' + str(_outer_socket.fileno()) + ' tun_ip:' + _outer_worker.get_tun_ip())
+        logger.info('outer worker accept fileno:' + str(_outer_socket.fileno()) + 'client_address:' + str(address) +
+                    ' tun_ip:' + _outer_worker.get_tun_ip())
 
     # init inner_worker
     _tun_con = TunConnector('yt_tun')
@@ -59,10 +60,10 @@ def run():
             return
 
 def log_config(level):
-    if not os.path.isdir('/var/log/yttpn'):
-        os.makedirs('/var/log/yttpn')
+    if not os.path.isdir('/var/log/ytvpn'):
+        os.makedirs('/var/log/ytvpn')
     logger.setLevel(logging._levelNames[level])
-    handler = RotatingFileHandler("/var/log/yttpn/server.log", maxBytes=10000000, backupCount=10)
+    handler = RotatingFileHandler("/var/log/ytvpn/server.log", maxBytes=10000000, backupCount=10)
     console = logging.StreamHandler()
     formatter = logging.Formatter(
         '%(asctime)s %(process)d %(levelname)s %(filename)s:%(lineno)s %(funcName)s [-] %(message)s ')

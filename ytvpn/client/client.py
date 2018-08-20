@@ -54,10 +54,10 @@ def run():
 
 
 def log_config(level):
-    if not os.path.isdir('/var/log/yttpn'):
-        os.makedirs('/var/log/yttpn')
+    if not os.path.isdir('/var/log/ytvpn'):
+        os.makedirs('/var/log/ytvpn')
     logger.setLevel(logging._levelNames[level])
-    handler = RotatingFileHandler("/var/log/yttpn/server.log", maxBytes=10000000, backupCount=10)
+    handler = RotatingFileHandler("/var/log/ytvpn/client.log", maxBytes=10000000, backupCount=10)
     console = logging.StreamHandler()
     formatter = logging.Formatter(
         '%(asctime)s %(process)d %(levelname)s %(filename)s:%(lineno)s %(funcName)s [-] %(message)s ')

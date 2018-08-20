@@ -7,6 +7,7 @@ core_opts = [
     cfg.BoolOpt('CLIENT_TO_CLIENT',default=False,help='allow or deny connection between clients'),
     cfg.StrOpt('SERVERIP',default='10.5.0.1',help='the server tun ip'),
     cfg.StrOpt('DHCP_POOL',default='10.5.0.10-20',help='IP pool assigned to client'),
+    cfg.StrOpt('user_file',default='/etc/tcp-forward/user_file',help='user file'),
 ]
 
 

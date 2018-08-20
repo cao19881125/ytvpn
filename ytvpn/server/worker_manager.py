@@ -2,7 +2,9 @@ import inner_worker
 import outer_worker
 from common import forward_event
 from common import connector
+from common import rsa_handler
 import dhcp_manager
+import user_pass
 
 
 class WorkerDoneException(Exception):
@@ -15,6 +17,8 @@ class WorkerManager(object):
         self.__inner_worker = None
         self.__worker_id_seq = 0
         self.__dhcp_manager = dhcp_manager.DHCPManager()
+        self.__rsa_handler = rsa_handler.RSAHandlerServer()
+        self.__user_pass = user_pass.UserPass()
         self.__tunip2id = {}
 
     def generate_worker_id(self):
@@ -38,6 +42,7 @@ class WorkerManager(object):
     def remove_outer_worker(self,worker_id):
         if self.__outer_workers.has_key(worker_id):
             tun_ip = self.__outer_workers[worker_id].get_tun_ip()
+            self.__dhcp_manager.return_ip(tun_ip)
             self.__tunip2id.pop(tun_ip)
             self.__outer_workers.pop(worker_id)
 
@@ -68,6 +73,19 @@ class WorkerManager(object):
 
     def __outer_to_inner_channel(self,outer_worker_id):
         def channel(event):
-            if self.__inner_worker:
-                self.__inner_worker.handler_event(event)
+
+            if event.event_type == forward_event.TRANSDATAEVENT:
+                if self.__inner_worker:
+                    self.__inner_worker.handler_event(event)
+            elif event.event_type == forward_event.RSAEVENT:
+                if event.rsa_type == forward_event.RSAEvent.Rsa_type.GET_PUB_KEY:
+                    return self.__rsa_handler.get_pub_key()
+                elif event.rsa_type == forward_event.RSAEvent.Rsa_type.DECODE:
+                    return self.__rsa_handler.decode(event.data)
+            elif event.event_type == forward_event.USERVERIFYEVENT:
+                try:
+                    return self.__user_pass.check_pass_word(event.user,event.password)
+                except Exception,e:
+                    return False
+
         return channel

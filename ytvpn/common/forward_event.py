@@ -1,9 +1,12 @@
+from enum import Enum
 
 FDEVENT = 'FDEvent'
 TRANSDATAEVENT = 'TransDataEvent'
 CLOSECONEVENT = 'CloseConEvent'
 SCHEDULEREVENT = 'SchedulerEvent'
 ALLOCATEIPEVENT = 'AllocateIPEvent'
+RSAEVENT = 'RSAEvent'
+USERVERIFYEVENT = 'UserVerifyEvent'
 
 class ForwardEvent(object):
     def __init__(self,event_type):
@@ -33,6 +36,28 @@ class AllocateIPEvent(ForwardEvent):
     def __init__(self,ip):
         super(AllocateIPEvent,self).__init__(ALLOCATEIPEVENT)
         self.dst_ip = ip
+
+class UserVerifyEvent(ForwardEvent):
+    def __init__(self,user,password):
+        super(UserVerifyEvent,self).__init__(USERVERIFYEVENT)
+        self.user = user
+        self.password = password
+
+
+class RSAEvent(ForwardEvent):
+    class Rsa_type(Enum):
+        GET_PUB_KEY = 1
+        ENCODE = 2
+        DECODE = 3
+    def __init__(self,type,data = ''):
+        super(RSAEvent,self).__init__(RSAEVENT)
+        self.rsa_type = type
+        self.data = data
+
+class LoginEvent(ForwardEvent):
+    def __init__(self,user,passwd):
+        self.user = user
+        self.passwd = passwd
 
 def event_filter(func):
     def filter(*args,**kwargs):

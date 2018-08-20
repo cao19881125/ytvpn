@@ -1,8 +1,10 @@
 
 
 class DATA_TYPE(object):
-    LOGIN = 0x00
-    LOGIN_FAILED = 0x01
+    LOGIN_PUBKEY = 0x00
+    LOGIN_USERINFO = 0X01
+    LOGIN_SUCCESS = 0X02
+    LOGIN_FAILED = 0x03
     TRANS_DATA = 0x20
     HEART_BEAT = 0x30
 

@@ -8,18 +8,22 @@ logger = logging.getLogger('my_logger')
 class OuterDataHandler(DataHandler):
     def __init__(self):
         super(OuterDataHandler,self).__init__()
-        self._protocol_parse = client_protocol.ClientProtocolHandler()
+        #self._protocol_parse = client_protocol.ClientProtocolHandler()
         self.__one_package_size = 2 ** 31
 
-    def login_to_server(self,user_name,password,outer_connector):
-        data = bytearray(32)
-        data[0:len(user_name)] = bytearray(user_name)
-        data[16:16+len(password)] = bytearray(password)
+    def login_to_server(self,data,outer_connector):
 
-        forw_data = forward_data.ForwardData(forward_data.DATA_TYPE.LOGIN, 0, '',data)
+        forw_data = forward_data.ForwardData(forward_data.DATA_TYPE.LOGIN_USERINFO, 0, '',data)
         protocol_parser = protocol_handler.ProtocolHandler()
         send_package = protocol_parser.build_data(forw_data)
         outer_connector.send(send_package)
+
+    def login_apply_pubkey(self,outer_connector):
+        forw_data = forward_data.ForwardData(forward_data.DATA_TYPE.LOGIN_PUBKEY, 0, '', '')
+        protocol_parser = protocol_handler.ProtocolHandler()
+        send_package = protocol_parser.build_data(forw_data)
+        outer_connector.send(send_package)
+
 
     def trans_data(self,forward_id,data,outer_connector):
         ori = 0

@@ -1,6 +1,7 @@
 import inner_worker
 import outer_worker
 from common import forward_event
+from common import rsa_handler
 
 class WorkerDoneException(Exception):
     pass
@@ -9,6 +10,7 @@ class WorkerManager(object):
     def __init__(self):
         self.__inner_worker = None
         self.__outer_worker = None
+        self.__rsa_handler = rsa_handler.RSAHandlerClient()
 
     def set_inner_worker(self, tun_connector):
         self.__inner_worker = inner_worker.InnerWorker(tun_connector,self.__inner_to_outer_channel())
@@ -41,6 +43,10 @@ class WorkerManager(object):
 
     def __outer_to_inner_channel(self):
         def channel(event):
-            if self.__inner_worker:
-                self.__inner_worker.handler_event(event)
+            if event.event_type in (forward_event.TRANSDATAEVENT,forward_event.ALLOCATEIPEVENT):
+                if self.__inner_worker:
+                    self.__inner_worker.handler_event(event)
+            elif event.event_type == forward_event.RSAEVENT:
+                if event.rsa_type == forward_event.RSAEvent.Rsa_type.ENCODE:
+                    return self.__rsa_handler.encode(*event.data)
         return channel

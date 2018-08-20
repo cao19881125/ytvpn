@@ -6,6 +6,7 @@ from common import ring_buffer
 from common import forward_data
 from common import forward_event
 import data_handler
+import json
 import time
 
 logger = logging.getLogger('my_logger')
@@ -51,14 +52,14 @@ class OuterWorker(object):
             else:
                 if self.__connector.con_state != connector.CON_STATE.CON_CONNECTED:
                     error_happen = True
-                    logger.error("OuterWorker current state:WORKING recv data error")
+                    logger.error("OuterWorker %d current state:WORKING recv data error"%(self.__worker_id))
 
         elif event.fd_event & select.EPOLLHUP:
             error_happen = True
 
         if error_happen:
             self.__state = self.State.CLOSED
-            logger.debug("OuterWorkercurrent state:WORKING change state to DISCONNECTED")
+            logger.debug("OuterWorker %d current state:WORKING change state to DISCONNECTED"%(self.__worker_id))
 
     def __handle_data(self):
 
@@ -72,10 +73,36 @@ class OuterWorker(object):
 
         if self.__state == self.State.LOGIN:
             for data in datas:
-                if data.data_type == forward_data.DATA_TYPE.LOGIN:
-                    self.__data_handler.send_login_reply(self.__worker_id,self.__tun_ip,self.__connector)
-                    self.__state = self.State.WORKING
-                    return
+                if data.data_type == forward_data.DATA_TYPE.LOGIN_PUBKEY:
+                    # self.__data_handler.send_login_reply(self.__worker_id,self.__tun_ip,self.__connector)
+                    # self.__state = self.State.WORKING
+                    # logger.debug('OutWorker %d current state:LOGIN change state to WORKING'%(self.__worker_id))
+                    get_pub_key_event = forward_event.RSAEvent(forward_event.RSAEvent.Rsa_type.GET_PUB_KEY)
+                    pubkey = self.__sourth_interface_channel(get_pub_key_event)
+                    if not pubkey:
+                        logger.error('OuterWorker %d get pubkey failed change state to CLOSED'%(self.__worker_id))
+                        self.__state = self.State.CLOSED
+                        return
+                    self.__data_handler.send_pubkey_reply(self.__worker_id,pubkey,self.__connector)
+                elif data.data_type == forward_data.DATA_TYPE.LOGIN_USERINFO:
+                    parse_data_event = forward_event.RSAEvent(forward_event.RSAEvent.Rsa_type.DECODE,data.data)
+                    json_str = self.__sourth_interface_channel(parse_data_event)
+                    try:
+                        user_info = json.loads(json_str)
+                    except Exception,e:
+                        logger.error('OuterWorker %d pars user info failed:user info:%s'%(self.__worker_id,json_str))
+
+                    user_check_event = forward_event.UserVerifyEvent(user_info['user_name'],user_info['password'])
+                    result = self.__sourth_interface_channel(user_check_event)
+                    if result:
+                        info_to_client = {'tun_ip':self.__tun_ip,'gateway_ip':''}
+                        self.__data_handler.send_login_reply(True,self.__worker_id,json.dumps(info_to_client),self.__connector)
+                        self.__state = self.State.WORKING
+                        logger.info('OuterWorker %d login success,change state to WORKING'%(self.__worker_id))
+                    else:
+                        self.__data_handler.send_login_reply(False,self.__worker_id,'',self.__connector)
+                        self.__state = self.State.CLOSED
+                        logger.info('OuterWorker %d login failed,change state to CLOSED'%(self.__worker_id))
         elif self.__state == self.State.WORKING:
             for data in datas:
                 if data.data_type == forward_data.DATA_TYPE.TRANS_DATA:
@@ -89,7 +116,13 @@ class OuterWorker(object):
 
         if self.__state == self.State.NONE:
             self.__state = self.State.LOGIN
+            self.__login_begin_time = time.time()
             #self.__state = self.State.WORKING
+        elif self.__state == self.State.LOGIN:
+            if time.time() - self.__login_begin_time > 5:
+                logger.error('OuterWorker %d current state:LOGIN wait client over 5 seconds,closed'%(self.__worker_id))
+                #self.__state = self.State.CLOSED
+                return
         elif self.__state == self.State.WORKING:
             if self.__connector.con_state != connector.CON_STATE.CON_CONNECTED:
                 self.__state = self.State.CLOSED

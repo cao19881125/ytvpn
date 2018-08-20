@@ -1,5 +1,6 @@
 import select
 import logging
+from oslo_config import cfg
 from enum import Enum
 from common import connector
 from common import forward_data
@@ -7,6 +8,7 @@ from common import forward_event
 from common import ring_buffer
 import data_handler
 import time
+import json
 logger = logging.getLogger('my_logger')
 
 
@@ -40,9 +42,17 @@ class OuterWorker(object):
 
         if self.__state == self.State.LOGIN:
             for data in datas:
-                if data.data_type == forward_data.DATA_TYPE.LOGIN:
+                if data.data_type == forward_data.DATA_TYPE.LOGIN_PUBKEY:
+                    pubkey_data = json.loads(str(data.data))
+                    pubkey = pubkey_data['public_key']
+                    user_info = {'user_name':cfg.CONF.USER_NAME,'password':cfg.CONF.PASSWORD}
+                    encode_event = forward_event.RSAEvent(forward_event.RSAEvent.Rsa_type.ENCODE,(pubkey,json.dumps(user_info)))
+                    encode_info = self.__sourth_interface_channel(encode_event)
+                    self.__data_handler.login_to_server(encode_info,self.__connector)
+                elif data.data_type == forward_data.DATA_TYPE.LOGIN_SUCCESS:
                     self.__worker_id = data.id
-                    allocate_ip_event = forward_event.AllocateIPEvent(data.dst_ip)
+                    ip_info = json.loads(str(data.data))
+                    allocate_ip_event = forward_event.AllocateIPEvent(ip_info['tun_ip'])
                     self.__sourth_interface_channel(allocate_ip_event)
                     self.__state = self.State.WORKING
                     logger.info('OuterWorker change state from LOGIN to WORKING')
@@ -61,7 +71,9 @@ class OuterWorker(object):
             return
         if self.__state == self.State.NONE:
             #self.__state = self.State.LOGIN
-            self.__data_handler.login_to_server('cyt','123456',self.__connector)
+            #self.__data_handler.login_to_server('cyt','123456',self.__connector)
+            self.__data_handler.login_apply_pubkey(self.__connector)
+            logger.debug('OuterWorker reply pubkey,change state to LOGIN')
             self.__state = self.State.LOGIN
         elif self.__state == self.State.WORKING:
             if self.__connector.con_state != connector.CON_STATE.CON_CONNECTED:
