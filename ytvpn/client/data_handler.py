@@ -11,6 +11,16 @@ class OuterDataHandler(DataHandler):
         #self._protocol_parse = client_protocol.ClientProtocolHandler()
         self.__one_package_size = 2 ** 31
 
+    def send_heart_beat(self, outer_connector):
+        forw_data = forward_data.ForwardData(forward_data.DATA_TYPE.HEART_BEAT, 0, '0.0.0.0', '')
+        protocol_parser = protocol_handler.ProtocolHandler()
+        send_package = protocol_parser.build_data(forw_data)
+        if outer_connector and outer_connector.con_state == connector.CON_STATE.CON_CONNECTED:
+            send_bytes = outer_connector.send(send_package)
+            if send_bytes <= 0:
+                logger.error("HeartBeat send failed")
+                raise Exception("Send HeartBeat failed")
+
     def login_to_server(self,data,outer_connector):
 
         forw_data = forward_data.ForwardData(forward_data.DATA_TYPE.LOGIN_USERINFO, 0, '',data)

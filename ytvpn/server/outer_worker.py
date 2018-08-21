@@ -61,6 +61,13 @@ class OuterWorker(object):
             self.__state = self.State.CLOSED
             logger.debug("OuterWorker %d current state:WORKING change state to DISCONNECTED"%(self.__worker_id))
 
+    def send_heart_beat_reply(self):
+        try:
+            self.__data_handler.send_heart_beat_reply(self.__connector)
+        except Exception, e:
+            logger.error("OuterWorker %d current state:WORKING send heartbeat reply error,change state to DISCONNECTED"%(self.__worker_id))
+            self.__state = self.State.DISCONNECTED
+
     def __handle_data(self):
 
 
@@ -108,7 +115,9 @@ class OuterWorker(object):
                 if data.data_type == forward_data.DATA_TYPE.TRANS_DATA:
                     trans_event = forward_event.TransDataEvent(data.id, data)
                     self.__sourth_interface_channel(trans_event)
-
+                elif data.data_type == forward_data.DATA_TYPE.HEART_BEAT:
+                    self.send_heart_beat_reply()
+                    logger.debug("OuterWorker %d send heartbeat reply " % (self.__worker_id))
 
     def __scheduler_event(self, event):
         if not isinstance(event,forward_event.SchedulerEvent):

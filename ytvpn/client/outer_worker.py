@@ -26,6 +26,7 @@ class OuterWorker(object):
         self.__sourth_interface_channel = sourth_interface_channel
         self.__ring_buffer = ring_buffer.TimeoutRingbuffer(10240 * 10240, 5)
         self.__worker_id = None
+        self.__last_heart_beat_time = time.time()
 
     def has_done(self):
         return self.__state == self.State.DONE
@@ -64,7 +65,15 @@ class OuterWorker(object):
                 if data.data_type == forward_data.DATA_TYPE.TRANS_DATA:
                     trans_event = forward_event.TransDataEvent(data.id, data)
                     self.__sourth_interface_channel(trans_event)
+                elif data.data_type == forward_data.DATA_TYPE.HEART_BEAT:
+                    logger.debug('OuterWorker recv heartbeat reply')
 
+    def send_heart_beat(self):
+        try:
+            self.__data_handler.send_heart_beat(self.__connector)
+        except Exception, e:
+            logger.error("OuterrWorker current state:WORKING send heartbeat error,change state to CLOSED")
+            self.__state = self.State.CLOSED
 
     def __scheduler_event(self, event):
         if not isinstance(event,forward_event.SchedulerEvent):
@@ -80,6 +89,11 @@ class OuterWorker(object):
                 self.__state = self.State.CLOSED
                 logger.debug("OuterWorker current state:WORKING change state to CLOSED due connector state error:%s"%(str(self.__connector.con_state)) )
                 return
+            current_time = time.time()
+            if current_time - self.__last_heart_beat_time >= 30:
+                self.send_heart_beat()
+                self.__last_heart_beat_time = current_time
+                logger.debug("OuterWorker send hearbeat")
         elif self.__state == self.State.CLOSED:
             self.__connector.close()
             self.__state = self.State.DONE
