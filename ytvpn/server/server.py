@@ -31,6 +31,10 @@ def run():
         _outer_socket.setblocking(0)
         _outer_worker = _worker_manager.add_outer_worker(_outer_socket,address)
 
+        if not _outer_worker:
+            logger.error('Create OuterWorker failed ' + ' client_address' + str(address))
+            return
+
         recver.add_receiver(_outer_socket.fileno(), select.EPOLLIN,_outer_worker.handler_event)
         logger.info('outer worker accept fileno:' + str(_outer_socket.fileno()) + 'client_address:' + str(address) +
                     ' tun_ip:' + _outer_worker.get_tun_ip())

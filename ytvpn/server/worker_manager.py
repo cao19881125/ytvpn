@@ -26,8 +26,10 @@ class WorkerManager(object):
         return self.__worker_id_seq
 
     def add_outer_worker(self,outer_socket,address):
-        _worker_id = self.generate_worker_id()
         tun_ip = self.__dhcp_manager.allocate_ip()
+        if not tun_ip:
+            return None
+        _worker_id = self.generate_worker_id()
         self.__tunip2id[tun_ip] = _worker_id
         _outer_worker = outer_worker.OuterWorker(_worker_id,tun_ip,outer_socket,address,self.__outer_to_inner_channel(_worker_id))
 

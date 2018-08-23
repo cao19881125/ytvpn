@@ -102,6 +102,8 @@ class ProtocolHandler(object):
                 break
 
     def pop_header(self,ring_buffer):
+        if ring_buffer.buf_len() < 2:
+            return
         ring_buffer.get(2)
 
     def get_one_complete_package(self,ring_buffer):
